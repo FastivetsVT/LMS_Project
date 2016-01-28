@@ -1,11 +1,13 @@
 package com.brainacad;
 
-import java.io.BufferedReader;
-import java.io.File;
+import java.io.EOFException;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.format.TextStyle;
@@ -16,47 +18,40 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
 
-public class Course implements Storeable {
+public class Course implements Storeable, Serializable {
 	
 	static {
 		list = new ArrayList<Course>();
 		readFromFile();
-		setCurrentID();
-	}
-	
-	private static int currentID;
+		//setCurrentID();
+	}	
+
+	private static final long serialVersionUID = 1L;	
 	public static List<Course> list;
+	//public static int currentID;
 	
-	private /*final*/ int id = ++currentID;
+	private transient /*final*/ int id;
 	private String name;
 	private String description;
 	private Date startDate;
 	private Date endDate;
 	private Set<DayOfWeek> days = new TreeSet<DayOfWeek>();
 	
+	/*private static void setCurrentID (){
+		currentID = list.size();
+	}*/
+	
 	private Course(){}
-	
-	private static void setCurrentID(){
-		if (list.isEmpty()) {
-			currentID = 0;
-		} else {
-			//if courses can be removed, else better to use list.size()-1
-			int maxID = list.get(0).id;
-			for (Course course: list){
-				if (course.id > maxID) maxID = course.id;
-			}
-			currentID = maxID;
-		}
-	}
-	
+
 	public static void create(){
 		Course course = new Course();
 		course.setName();
 		course.setDescription();
 		course.setDates();
 		course.setDays();	
-		if (list.add(course)) System.out.printf("\n\nNew course has been successfully created:\n");
+		if (list.add(course)) System.out.printf("\n\nNew course has been successfully created:\n");		
 		saveToFile();
+		course.id = list.size();
 		course.show();
 	}
 	
@@ -163,42 +158,26 @@ public class Course implements Storeable {
 	}	
 
 	public static void saveToFile() {
-		//not the final version
-		try (PrintWriter out = new PrintWriter(new File("Courses.txt"))) {
-			for (Course course: list){
-				StringBuilder daysFormat = new StringBuilder();
-				for (DayOfWeek dow: course.days){
-					if (daysFormat.length() != 0) daysFormat.append("|");
-					daysFormat.append(dow.getValue());
-				}
-				out.printf("%d|%s|%s|%d|%d|%s", course.id, course.name, course.description, course.startDate.getTime(),course.endDate.getTime(),daysFormat);
-				out.println();
-			}			
-			out.flush();
-		} catch (FileNotFoundException e) {
+		try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("Course.ser"))) {
+			for (Course course : list){
+				out.writeObject(course);
+			}
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	public static void readFromFile() {
-		//not the final version
-		try (BufferedReader in = new BufferedReader(new FileReader("Courses.txt"))) {
-			String object; 
-			while ((object = in.readLine()) != null) {
-				Scanner objectFields = new Scanner(object).useDelimiter("\\|");
-				Course course = new Course();
-				course.id = objectFields.nextInt();
-				course.name = objectFields.next();
-				course.description = objectFields.next();
-				course.startDate = new Date(objectFields.nextLong());
-				course.endDate = new Date(objectFields.nextLong());
-				while (objectFields.hasNext()){
-					course.days.add(DayOfWeek.of(objectFields.nextInt()));
-				}
+	public static void readFromFile() {		
+		try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("Course.ser"))) {
+			int i = 1;
+			while (true){
+				Course course = (Course)in.readObject();
+				course.id = i++;
 				list.add(course);
 			}
-		} catch (FileNotFoundException e) {
-		} catch (IOException e) {
+		} catch (FileNotFoundException | EOFException e) {
+			return;
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

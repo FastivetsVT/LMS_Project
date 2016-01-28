@@ -24,6 +24,7 @@ public class LMS_Main {
 			System.out.print("\nPlease, enter the command: ");
 			String input = SCAN_INPUT.nextLine().toLowerCase();
 			if (COMMANDS[0].matcher(input).matches()){
+				Course.saveToFile();
 				System.out.println("\nThe End");
 				return;
 			} else if (COMMANDS[1].matcher(input).matches()){
