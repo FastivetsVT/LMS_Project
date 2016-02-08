@@ -1,10 +1,10 @@
 package com.brainacad;
 
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 
-public interface Storeable {	
+public interface Storeable extends Serializable {	
 	//not the final version
-	/*String DELIMITER = "|";
-	void saveToFile ();
+	/*void saveToFile ();
 	void readFromFile();*/
 }

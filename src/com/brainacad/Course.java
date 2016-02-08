@@ -1,13 +1,10 @@
 package com.brainacad;
 
-import java.io.EOFException;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.format.TextStyle;
@@ -17,171 +14,253 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
+import static com.brainacad.LMS_Main.*;
 
-public class Course implements Storeable, Serializable {
-	
+public class Course implements Storeable {	
 	static {
-		list = new ArrayList<Course>();
+		coursesList = new ArrayList<Course>();
 		readFromFile();
-		//setCurrentID();
-	}	
-
+	}
 	private static final long serialVersionUID = 1L;	
-	public static List<Course> list;
-	//public static int currentID;
+	public static List<Course> coursesList;
 	
-	private transient /*final*/ int id;
+	private final int ID = coursesList.size()+1;
 	private String name;
 	private String description;
 	private Date startDate;
 	private Date endDate;
-	private Set<DayOfWeek> days = new TreeSet<DayOfWeek>();
-	
-	/*private static void setCurrentID (){
-		currentID = list.size();
-	}*/
+	private Set<DayOfWeek> days;
 	
 	private Course(){}
-
-	public static void create(){
-		Course course = new Course();
-		course.setName();
-		course.setDescription();
-		course.setDates();
-		course.setDays();	
-		if (list.add(course)) System.out.printf("\n\nNew course has been successfully created:\n");		
+	
+	public static void createCourse() throws EscException {
+		Course newCourse = new Course();
+		newCourse.setName();
+		newCourse.setDescription();
+		newCourse.setStartDate();
+		newCourse.setEndDate();
+		newCourse.setDays();
+		coursesList.add(newCourse);		
 		saveToFile();
-		course.id = list.size();
-		course.show();
+		System.out.printf("\nNew course has been successfully created:\n%s",newCourse);
 	}
 	
-	public void setName() {
-		boolean isIllegal = true;		
-		while (isIllegal){
-			System.out.print("Course name: ");		
-			this.name =  LMS_Main.SCAN_INPUT.nextLine();
-			if (this.name.equals("")) {
-				System.err.println("Course name shouldn't be empty. Please, enter another name.");	
-			} else {
-				isIllegal = false;
-				String thisName = this.name.toLowerCase();
-				for (Course c: Course.list){
-					if (thisName.equals(c.name.toLowerCase())){
-						isIllegal = true;
-						System.err.println("Course name should be unique. Please, enter another name.");	
-						break;
-					}
-				}				
-			}					
+		public void setName() throws EscException {
+		name = null;
+		while (name == null){
+			try {
+				System.out.print("Course name: ");		
+				setName(SCAN_INPUT.nextLine());
+			} catch (IllegalArgumentException e){
+				System.err.printf("%s. Please, enter another name.\n", e.getMessage());
+			}
 		}		
 	}
 
-	public void setDescription() {
-		boolean isIllegal = true;
-		while (isIllegal){
-			System.out.print("Course description: ");
-			this.description =  LMS_Main.SCAN_INPUT.nextLine();
-			if (this.description.equals("")) System.err.println("Course description shouldn't be empty. Please, enter another name."); else isIllegal = false;
+	public void setName(String name) throws EscException, IllegalArgumentException {
+		if (name == null || (name = name.trim()).isEmpty()) throw new IllegalArgumentException("Course name shouldn't be empty");
+		if (ESC_COMMAND.matcher(name.toLowerCase()).matches()) throw new EscException("Last action cancelled.");
+		for (Course course: coursesList){
+			if (course.equals(name)) throw new IllegalArgumentException("Course name should be unique");
+		}			
+		this.name = name;
+	}
+	
+	public String getName() {
+		return name;
+	}
+
+	public void setDescription() throws EscException {
+		description = null;
+		while (description == null){
+			try {
+				System.out.print("Course description: ");
+				setDescription(SCAN_INPUT.nextLine());
+			} catch (IllegalArgumentException e){
+				System.err.printf("%s. Please, enter another description.\n", e.getMessage());
+			}
 		}	
 	}
 	
-	public void setDates() {
-		boolean isIllegalStartDate = true;
-		boolean isIllegalEndDate = true;
-		while (isIllegalStartDate || isIllegalEndDate){
+	public void setDescription(String description) throws EscException, IllegalArgumentException {
+		if (description == null || (description = description.trim()).isEmpty()) throw new IllegalArgumentException("Course description shouldn't be empty");
+		if (ESC_COMMAND.matcher(description.toLowerCase()).matches()) throw new EscException("Last action cancelled.");		
+		this.description = description;
+	}
+	
+	public String getDescription() {
+		return description;
+	}
+	
+	public void setStartDate() throws EscException {
+		startDate = null;
+		while (startDate == null){
 			try {
-				if (isIllegalStartDate) {
-					System.out.print("Start date: ");
-					this.startDate = LMS_Main.DATE_FORMAT.parse(LMS_Main.SCAN_INPUT.nextLine());
-					isIllegalStartDate = false;
-				}
-				if (isIllegalEndDate) {
-					System.out.print("End date: ");
-					this.endDate = LMS_Main.DATE_FORMAT.parse(LMS_Main.SCAN_INPUT.nextLine());
-					if (this.startDate.getTime() > this.endDate.getTime()) throw new RuntimeException();
-					isIllegalEndDate = false;
-				}				
+				System.out.print("Start date: ");
+				setStartDate(SCAN_INPUT.nextLine());
 			} catch (ParseException e) {
-				System.err.println("Illegal date format(dd.mm.yyyy), please, try again!");
-			} catch (RuntimeException e) {
-				System.err.println("Start date is bigger than end date. Please, enter another end date.");
+				System.err.printf("Illegal date format (%s). Please, try again.\n", DATE_FORMAT.toPattern());
+			} catch (IllegalArgumentException e){
+				System.err.printf("%s. Please, enter another start date.\n", e.getMessage());
+			}
+		}
+	}
+	
+	public void setStartDate(String startDate) throws EscException, ParseException, IllegalArgumentException {
+		if (startDate == null) throw new IllegalArgumentException("Start date shouldn't be empty");
+		if (ESC_COMMAND.matcher(startDate.toLowerCase()).matches()) throw new EscException("Last action cancelled.");
+		setStartDate(DATE_FORMAT.parse(startDate));
+	}
+	
+	public void setStartDate(Date startDate) throws IllegalArgumentException {
+		if (startDate == null) throw new IllegalArgumentException("Start date shouldn't be empty");
+		if (endDate != null && startDate.getTime() > endDate.getTime()) throw new IllegalArgumentException(String.format("Start date (%s) is bigger than end date (%s)", DATE_FORMAT.format(startDate), DATE_FORMAT.format(endDate)));
+		this.startDate = startDate;
+	}
+	
+	public Date getStartDate() {
+		return startDate;
+	}	
+	
+	public void setEndDate() throws EscException {
+		endDate = null;
+		while (endDate == null){
+			try {
+				System.out.print("End date: ");
+				setEndDate(SCAN_INPUT.nextLine());	
+			} catch (ParseException e) {
+				System.err.printf("Illegal date format (%s). Please, try again.\n", DATE_FORMAT.toPattern());
+			} catch (IllegalArgumentException e) {
+				System.err.printf("%s. Please, enter another end date.\n", e.getMessage());
 			}	
 		}
 	}
-
-	public void setDays() {
-		this.days = new TreeSet<DayOfWeek>();
-		boolean isIllegal = true;
-		while (isIllegal){
-			System.out.print("Days: ");
-			Scanner daysInput = new Scanner(LMS_Main.SCAN_INPUT.nextLine()).useDelimiter("\\W+");
-			String dayInput = null;
-			while (daysInput.hasNext()){				
-				try {
-					dayInput = daysInput.next().toUpperCase();
-					this.days.add(DayOfWeek.valueOf(dayInput));					
-				} catch (IllegalArgumentException e) {
-					System.err.printf("\"%s\" illegal day of week name\n", dayInput);
-				}				
-			}
-			if (this.days.isEmpty()) System.err.println("Days shouldn't be empty. Please, try again."); else isIllegal = false;
-		}		
+	
+	public void setEndDate(String endDate) throws EscException, ParseException, IllegalArgumentException {
+		if (endDate == null) throw new IllegalArgumentException("End date shouldn't be empty");
+		if (ESC_COMMAND.matcher(endDate.toLowerCase()).matches()) throw new EscException("Last action cancelled.");
+		setEndDate(DATE_FORMAT.parse(endDate));
 	}
 
-	public static void show(int i){
-		//if courses can be removed, else better to use get(i-1) from collection
-		for (Course course: Course.list){
-			if (course.id == i) {
-				StringBuilder daysFormat = new StringBuilder();
-				for (DayOfWeek dow: course.days){
-					if (daysFormat.length() != 0) daysFormat.append(", ");
-					daysFormat.append(dow.getDisplayName(TextStyle.SHORT, LMS_Main.LOCALE));
-				}
-				System.out.printf("Course ID: %d\nCourse name: %s\nCourse description: %s\nStart date: %s\nEnd date: %s\nDays: %s\n", course.id, course.name, course.description, LMS_Main.DATE_FORMAT.format(course.startDate), LMS_Main.DATE_FORMAT.format(course.endDate), daysFormat);
+	public void setEndDate(Date endDate) throws IllegalArgumentException {
+		if (endDate == null) throw new IllegalArgumentException("End date shouldn't be empty");
+		if (startDate != null && startDate.getTime() > endDate.getTime()) throw new IllegalArgumentException(String.format("Start date (%s) is bigger than end date (%s)", DATE_FORMAT.format(startDate), DATE_FORMAT.format(endDate)));
+		this.endDate = endDate;
+	}
+	
+	public Date getEndDate() {
+		return endDate;
+	}
+
+	public void setDays() throws EscException {
+		days = null;
+		while (days == null){
+			try {
+				System.out.print("Days: ");
+				setDays(SCAN_INPUT.nextLine());
+			} catch (IllegalArgumentException e){
+				System.err.printf("%s. Please, try again.\n", e.getMessage());
+			}			
+		}		
+	}
+	
+	public void setDays(String days) throws EscException, IllegalArgumentException {
+		if (days == null || days.trim().isEmpty()) throw new IllegalArgumentException("Days shouldn't be empty");
+		if (ESC_COMMAND.matcher(days.toLowerCase()).matches()) throw new EscException("Last action cancelled.");
+		Set<DayOfWeek> daysSet = new TreeSet<>();
+		Scanner daysInput = new Scanner(days.toUpperCase()).useDelimiter("\\W+");
+		String dayInput = null;		
+		while (daysInput.hasNext()){
+			try {
+				daysSet.add(DayOfWeek.valueOf(dayInput = daysInput.next()));					
+			} catch (IllegalArgumentException e) {
+				System.err.printf("\"%s\" illegal day of week name\n", dayInput);
+			}
+		}
+		setDays(daysSet);
+	}
+	
+	public void setDays(Set<DayOfWeek> days) throws IllegalArgumentException {
+		if (days == null || days.isEmpty()) throw new IllegalArgumentException("Days shouldn't be empty");
+		this.days = days;
+	}
+	
+	public Set<DayOfWeek> getDays() {
+		return days;
+	}
+	
+	@Override
+	public String toString() {
+		StringBuilder daysFormat = new StringBuilder();
+		for (DayOfWeek dow: days) daysFormat.append(dow.getDisplayName(TextStyle.SHORT, LOCALE)).append(", ");
+		return String.format("Course ID: %d\nCourse name: %s\nCourse description: %s\nStart date: %s\nEnd date: %s\nDays: %s", ID, name, description, DATE_FORMAT.format(startDate), DATE_FORMAT.format(endDate), daysFormat.delete(daysFormat.length()-2, daysFormat.length()));
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ID;
+		result = prime * result + ((days == null) ? 0 : days.hashCode());
+		result = prime * result + ((description == null) ? 0 : description.hashCode());
+		result = prime * result + ((endDate == null) ? 0 : endDate.hashCode());
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		result = prime * result + ((startDate == null) ? 0 : startDate.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (obj == null) return false;		
+		if (getClass() == obj.getClass()) {
+			Course other = (Course) obj;
+			if (ID != other.ID) return false;
+			if (name == null) {
+				if (other.name != null)	return false;
+			} else if (!name.equals(other.name)) return false;			
+		} else if (obj instanceof String){
+			return name.toLowerCase().equals(obj.toString().toLowerCase());
+		} else if (obj instanceof Integer) {
+			return ((Integer) obj).intValue() == ID;
+		}
+		return true;
+	}
+
+	public static void show(int id){
+		for (Course course: Course.coursesList){
+			if (course.equals(id)) {				
+				System.out.println(course);
 				return;
 			}
 		}
-		System.err.printf("Course with id %d doesnТt exist!\n", i);
-	}
-	
-	public void show(){
-		show(this.id);
+		System.err.printf("Course with ID %d doesnТt exist!\n", id);
 	}
 	
 	public static void showAll (){
-		StringBuilder courseNames  = new StringBuilder();
-		for (Course course: Course.list){
-			if (courseNames.length() != 0) courseNames.append(", ");
-			courseNames.append(course.name);
+		if (coursesList.isEmpty()){
+			System.err.println("No courses available yet");
+		} else {
+			StringBuilder courseNames  = new StringBuilder();
+			for (Course course: coursesList) courseNames.append(course.ID).append(": ").append(course.name).append("\n");
+			System.out.println(courseNames.deleteCharAt(courseNames.length()-1));
 		}
-		if (courseNames.length() == 0 ) System.err.println("Courses have not been created yet"); else System.out.printf("List of course names: %s\n", courseNames);
 	}	
 
 	public static void saveToFile() {
 		try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("Course.ser"))) {
-			for (Course course : list){
-				out.writeObject(course);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+			for (Course course : coursesList) out.writeObject(course);
+		} catch (IOException e) {e.printStackTrace();}
 	}
+	
 
 	public static void readFromFile() {		
 		try (ObjectInputStream in = new ObjectInputStream(new FileInputStream("Course.ser"))) {
-			int i = 1;
-			while (true){
-				Course course = (Course)in.readObject();
-				course.id = i++;
-				list.add(course);
-			}
-		} catch (FileNotFoundException | EOFException e) {
-			return;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			while (true) coursesList.add((Course)in.readObject());
+		} catch (IOException e) {return;
+		} catch (Exception e) {e.printStackTrace();}
 	}
-	
+
 	public class GradeBook{
 		//количество полученных баллов каждым студентом по каждой задаче в рамках курса
 	}
