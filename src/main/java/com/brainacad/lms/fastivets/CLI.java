@@ -31,7 +31,7 @@ public class CLI {
 
 	public static void main(String[] args) {
 		Manager.setScanInput(SCAN_INPUT);
-		QuitException.setPattern(COMMANDS[COMMANDS.length-1]);
+		QuitException.setPattern(COMMANDS[COMMANDS.length-2]);
 		CourseManager courseManager = CourseManager.getInstance();
 		StudentManager studentManager = StudentManager.getInstance();
 		TrainerManager trainerManager = TrainerManager.getInstance();
